@@ -1,0 +1,114 @@
+[
+  {
+    "ContainingType": "WepApi.Controllers.AcountController",
+    "Method": "CheckSession",
+    "RelativePath": "api/Acount/CheckSession",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.AcountController",
+    "Method": "Login",
+    "RelativePath": "api/Acount/Login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "loginRequests",
+        "Type": "WepApi.Dto.AccountDtos.LoginRequestsDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.AcountController",
+    "Method": "Register",
+    "RelativePath": "api/Acount/Register",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "data",
+        "Type": "WepApi.Dto.AccountDtos.RegisterRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.AcountController",
+    "Method": "SendCode",
+    "RelativePath": "api/Acount/SendCode",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "data",
+        "Type": "WepApi.Dto.AccountDtos.SendCodeRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "CreateLesson",
+    "RelativePath": "api/Teacher/CreateLesson",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "data",
+        "Type": "WepApi.Dto.TeacherDtos.CreateLessonRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "GetLesson",
+    "RelativePath": "api/Teacher/GetLesson",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "GetLessonList",
+    "RelativePath": "api/Teacher/GetLessonStudentList",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "LessonId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  }
+]
