@@ -53,7 +53,6 @@ namespace WepApi.Controllers
             }
 
         }
-
         [HttpGet("GetLesson")]
         public IActionResult GetLesson([FromQuery] GetLessonRequestDto data)
         {
@@ -62,25 +61,37 @@ namespace WepApi.Controllers
                 return BadRequest(new { message = "Geçerli bir e-posta adresi giriniz." });
             }
 
+            // Öğretim görevlisini email ile al
             var teacher = _teacherServices.GetTeacher(data.email);
             if (teacher == null)
             {
                 return NotFound(new { message = "Öğretim görevlisi bulunamadı." });
             }
 
+            // Bu öğretmenin derslerini al
             var lessons = _context.Lessons
-                .Include(l => l.StudentLessons)
-                .Where(l => l.TeacherId == teacher.TeacherId)
-                .ToList();
-            
+                .Where(l => l.TeacherId == teacher.TeacherId) // TeacherId ile filtrele
+                .Select(l => new
+                {
+                    l.LessonId,
+                    l.Name,
+                    l.TotalWeeks,
+                    l.SessionsPerWeek,
+                    l.MaxAbsence,
+                    l.UniqueCode,
+                    StudentCount = l.StudentLessons.Count() // Öğrenci sayısını hesapla
+
+                })
+                .ToList(); // Sadece ders bilgilerini al
 
             if (!lessons.Any())
             {
                 return NotFound(new { message = "Bu öğretim görevlisinin dersi bulunmamaktadır." });
             }
 
-            return Ok(lessons);
+            return Ok(lessons); // Dersler listesi
         }
+
 
         [HttpGet("GetLessonStudentList")]
         public IActionResult GetLessonList([FromQuery] GetLessonStudentListRequestDto data)

@@ -1,35 +1,31 @@
 class Lesson {
-  final int id;
+  final int lessonId;
   final String name;
-  final String uniqueCode;
-  final int sessionsPerWeek;
   final int totalWeeks;
+  final int sessionsPerWeek;
   final int maxAbsence;
-  final int studentLessons;
-
-  static bool isEmpty = false;
-
-  static var length;
+  final String uniqueCode;
+  final int studentCount;
 
   Lesson({
-    required this.id,
+    required this.lessonId,
     required this.name,
-    required this.uniqueCode,
-    required this.sessionsPerWeek,
     required this.totalWeeks,
+    required this.sessionsPerWeek,
     required this.maxAbsence,
-    required this.studentLessons,
+    required this.uniqueCode,
+    required this.studentCount,
   });
 
   factory Lesson.fromJson(Map<String, dynamic> json) {
     return Lesson(
-      id: json['id'],
+      lessonId: json['lessonId'],
       name: json['name'],
-      uniqueCode: json['uniqueCode'],
-      sessionsPerWeek: json['sessionsPerWeek'],
       totalWeeks: json['totalWeeks'],
+      sessionsPerWeek: json['sessionsPerWeek'],
       maxAbsence: json['maxAbsence'],
-      studentLessons: json['studentLessons'],
+      uniqueCode: json['uniqueCode'],
+      studentCount: json['studentCount'],
     );
   }
 }

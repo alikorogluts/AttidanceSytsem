@@ -6,6 +6,42 @@ import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/EditAttendanceScreen
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/MyLessonScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/ReportsScreen.dart';
 
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Öğretmen Paneli',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          labelTextStyle: MaterialStateProperty.resolveWith<TextStyle>((
+            Set<MaterialState> states,
+          ) {
+            if (states.contains(MaterialState.selected)) {
+              return TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: Colors.blue.shade800,
+              );
+            }
+            return TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            );
+          }),
+          indicatorColor: Colors.blue.shade100,
+        ),
+      ),
+      home: TeacherMainScreen(),
+    );
+  }
+}
+
 class TeacherMainScreen extends StatefulWidget {
   @override
   _TeacherMainScreenState createState() => _TeacherMainScreenState();
@@ -30,17 +66,12 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     _prefsFuture = _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
+  Future<String?> _loadUserData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       userName = prefs.getString("user_name");
     });
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    return userName;
   }
 
   @override
@@ -49,15 +80,18 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
       appBar: AppBar(
         title: Text(
           userName ?? "Öğretmen Paneli",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_none, size: 28),
+            icon: Icon(Icons.notifications_outlined),
             onPressed: () {},
           ),
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(backgroundImage: AssetImage('assets/logo.png')),
           ),
         ],
@@ -79,69 +113,48 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
   }
 
   Widget _buildModernNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 16, spreadRadius: 2),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(fontSize: 12),
-        unselectedLabelStyle: TextStyle(fontSize: 12),
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey[600],
-        items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(Icons.school_outlined, Icons.school, 0),
-            label: 'Derslerim',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              Icons.checklist_rtl_outlined,
-              Icons.checklist_rtl,
-              1,
-            ),
-            label: 'Yoklama',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(Icons.add_circle_outline, Icons.add_circle, 2),
-            label: 'Oluştur',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(Icons.edit_note_outlined, Icons.edit_note, 3),
-            label: 'Düzenle',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              Icons.insert_chart_outlined,
-              Icons.insert_chart,
-              4,
-            ),
-            label: 'Raporlar',
-          ),
-        ],
-      ),
+    return NavigationBar(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      elevation: 2,
+      height: 72,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      destinations: [
+        NavigationDestination(
+          icon: Icon(Icons.school_outlined, color: _getIconColor(0)),
+          selectedIcon: Icon(Icons.school, color: _getSelectedColor()),
+          label: 'Derslerim',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.checklist_outlined, color: _getIconColor(1)),
+          selectedIcon: Icon(Icons.checklist, color: _getSelectedColor()),
+          label: 'Yoklama',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.add_circle_outline, color: _getIconColor(2)),
+          selectedIcon: Icon(Icons.add_circle, color: _getSelectedColor()),
+          label: 'Oluştur',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.edit_note_outlined, color: _getIconColor(3)),
+          selectedIcon: Icon(Icons.edit_note, color: _getSelectedColor()),
+          label: 'Düzenle',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.insert_chart_outlined, color: _getIconColor(4)),
+          selectedIcon: Icon(Icons.insert_chart, color: _getSelectedColor()),
+          label: 'Raporlar',
+        ),
+      ],
     );
   }
 
-  Widget _buildNavIcon(IconData outline, IconData filled, int index) {
-    return Column(
-      children: [
-        Icon(_selectedIndex == index ? filled : outline, size: 28),
-        SizedBox(height: 4),
-        if (_selectedIndex == index)
-          Container(
-            height: 2,
-            width: 24,
-            decoration: BoxDecoration(
-              color: Colors.blueAccent,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-      ],
-    );
+  Color _getSelectedColor() => Theme.of(context).colorScheme.error;
+
+  Color _getIconColor(int index) {
+    return _selectedIndex == index
+        ? _getSelectedColor()
+        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
   }
 }
