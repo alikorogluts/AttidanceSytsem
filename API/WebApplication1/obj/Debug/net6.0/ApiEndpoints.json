@@ -81,6 +81,22 @@
   },
   {
     "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "DeleteLessonStudent",
+    "RelativePath": "api/Teacher/DeleteLessonStudent",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "studentLessonId",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
     "Method": "GetLesson",
     "RelativePath": "api/Teacher/GetLesson",
     "HttpMethod": "GET",
@@ -97,7 +113,7 @@
   },
   {
     "ContainingType": "WepApi.Controllers.TeacherController",
-    "Method": "GetLessonList",
+    "Method": "GetLessonStudentList",
     "RelativePath": "api/Teacher/GetLessonStudentList",
     "HttpMethod": "GET",
     "IsController": true,

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Asn1.Ocsp;
 using System.Runtime.InteropServices;
 using WepApi.Context;
 using WepApi.Dto.TeacherDtos;
@@ -94,10 +95,17 @@ namespace WepApi.Controllers
 
 
         [HttpGet("GetLessonStudentList")]
-        public IActionResult GetLessonList([FromQuery] GetLessonStudentListRequestDto data)
+        public IActionResult GetLessonStudentList([FromQuery] GetLessonStudentListRequestDto data)
         {
             var studentList = _context.StudentLessons
                 .Where(StudentLesson => StudentLesson.LessonId == data.LessonId)
+                .Select(l => new
+                {
+                    l.Id,
+                    l.StudentId,
+                    l.Student.FullName,
+                    l.AbsenceCount
+                })
                 .ToList();
             
 
@@ -105,6 +113,38 @@ namespace WepApi.Controllers
             if (studentList == null) return BadRequest("Ders bulunamadı");
 
             return Ok(studentList);
+        }
+
+        [HttpDelete("DeleteLessonStudent")]
+        public IActionResult DeleteLessonStudent(int studentLessonId)
+        {
+            try
+            {
+                
+
+                var studentLesson = _context.StudentLessons
+                    .Include(sl => sl.Lesson)
+                    .Include(sl => sl.Attendances) // Öğrencinin yoklamalarını da dahil ettik
+                    .FirstOrDefault(sl => sl.Id == studentLessonId );
+
+                if (studentLesson == null)
+                    return BadRequest(new { success = false, message = "Öğrenci bulunamadı." });
+
+                // Önce öğrencinin yoklamalarını siliyoruz
+                _context.Attendances.RemoveRange(studentLesson.Attendances);
+
+                // Sonrasında öğrenci-derse kaydını siliyoruz
+                _context.StudentLessons.Remove(studentLesson);
+                _context.SaveChanges();
+
+                // Güncellenmiş öğrenci sayısını hesaplıyoruz
+
+                return Ok(new { success = true,message="Silme işlemi başarılı"});
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
 

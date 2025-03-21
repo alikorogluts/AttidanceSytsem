@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/AttendanceScreen.dart';
-import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/CreateLessonScreen.dart';
+import 'package:yoklama_mobil/Screen/Teacher/CreateLessonScreen/CreateLessonScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/EditAttendanceScreen.dart';
-import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/MyLessonScreen.dart';
+import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/MyLessonScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/ReportsScreen.dart';
 
 class MyApp extends StatelessWidget {
