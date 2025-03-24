@@ -1,15 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yoklama_mobil/Models/GetLessonStudentList.dart';
+import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/_SaveAttendanceServices.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final List<StudentLesson> students;
   final int lessonId;
+  final String lessonName;
 
   const AttendanceScreen({
     super.key,
     required this.students,
     required this.lessonId,
+    required this.lessonName,
   });
 
   @override
@@ -20,12 +26,259 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   late List<StudentLesson> _students;
   final Map<int, String> _attendanceStatus = {};
   final Map<int, String?> _excuseNotes = {};
+  int? _selectedLessonDuration;
+
+  // Süre ve zaman kontrolü için değişkenler
+  DateTime? _lastAttendanceTime;
+  int _remainingTime = 0;
+  bool _isAttendanceDisabled = false;
+  late Timer _timer;
+  static const _lockDuration = Duration(seconds: 120);
+  static const _attendanceTimeKey = 'lastAttendanceTime';
+
+  final List<Map<String, dynamic>> _lessonDurations = [
+    {'value': 1, 'text': '1 Ders (45 dakika)'},
+    {'value': 2, 'text': '2 Ders (90 dakika)'},
+    {'value': 3, 'text': '3 Ders (135 dakika)'},
+    {'value': 4, 'text': '4 Ders (180 dakika)'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Animasyonları kaldırdık; direkt widget.students listesini atıyoruz.
     _students = widget.students;
+    _loadLastAttendanceTime();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  /// SharedPreferences’den son yoklama zamanını yüklüyoruz.
+  Future<void> _loadLastAttendanceTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastMillis = prefs.getInt(_attendanceTimeKey);
+    if (lastMillis != null) {
+      _lastAttendanceTime = DateTime.fromMillisecondsSinceEpoch(lastMillis);
+      final diff = DateTime.now().difference(_lastAttendanceTime!);
+      if (diff < _lockDuration) {
+        setState(() {
+          _isAttendanceDisabled = true;
+          _remainingTime = _lockDuration.inSeconds - diff.inSeconds;
+        });
+      }
+    }
+  }
+
+  /// Yoklama alındığında zamanı kaydediyoruz.
+  Future<void> _saveAttendanceTime(DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_attendanceTimeKey, time.millisecondsSinceEpoch);
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingTime > 0) {
+        setState(() => _remainingTime--);
+      } else {
+        if (_isAttendanceDisabled) {
+          setState(() => _isAttendanceDisabled = false);
+        }
+      }
+    });
+  }
+
+  Widget _buildLessonDurationSelector() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Ders Süresi Seçin',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            isExpanded: true,
+            value: _selectedLessonDuration,
+            items:
+                _lessonDurations
+                    .map(
+                      (e) => DropdownMenuItem<int>(
+                        value: e['value'],
+                        child: Text(
+                          e['text'],
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    )
+                    .toList(),
+            onChanged:
+                (value) => setState(() => _selectedLessonDuration = value),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeIndicator() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child:
+          _isAttendanceDisabled
+              ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sonraki yoklama: ${_remainingTime ~/ 60}:${(_remainingTime % 60).toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              )
+              : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildStudentList() {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 2,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child:
+                _students.isEmpty
+                    ? Center(
+                      child: Text(
+                        'Öğrenci bulunamadı',
+                        style: TextStyle(color: Theme.of(context).hintColor),
+                      ),
+                    )
+                    : ListView.separated(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: _students.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder:
+                          (context, index) =>
+                              _buildStudentItem(_students[index]),
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentItem(StudentLesson student) {
+    final status = _attendanceStatus[student.studentLessonId];
+
+    return Slidable(
+      key: ValueKey(student.studentLessonId),
+      startActionPane: ActionPane(
+        motion: const ScrollMotion(),
+        extentRatio: 0.25,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _updateStatus(student.studentLessonId, 'present'),
+            backgroundColor: Colors.green.shade300,
+            foregroundColor: Colors.white,
+            icon: Icons.check,
+            label: 'Var',
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const ScrollMotion(),
+        extentRatio: 0.5,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _updateStatus(student.studentLessonId, 'absent'),
+            backgroundColor: Colors.red.shade300,
+            foregroundColor: Colors.white,
+            icon: Icons.close,
+            label: 'Yok',
+            borderRadius: BorderRadius.circular(12),
+          ),
+          SlidableAction(
+            onPressed: (_) => _showExcuseDialog(student.studentLessonId),
+            backgroundColor: Colors.amber.shade400,
+            foregroundColor: Colors.white,
+            icon: Icons.info_outline,
+            label: 'İzinli',
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ],
+      ),
+      child: _buildStudentCard(student, status),
+    );
+  }
+
+  Widget _buildStudentCard(StudentLesson student, String? status) {
+    // Varsayılan kart rengi koyu, eğer yoklama seçilmemişse.
+    final cardColor =
+        status != null ? _getStatusColor(status) : Colors.grey.shade900;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: cardColor,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Icon(Icons.person, size: 32, color: Colors.white),
+        title: Text(
+          student.StudentName,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          'No: ${student.studentId}',
+          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8)),
+        ),
+        trailing:
+            status == 'excused'
+                ? Tooltip(
+                  message: _excuseNotes[student.studentLessonId] ?? '',
+                  child: const Icon(Icons.info_outline, color: Colors.white),
+                )
+                : null,
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    // Duruma göre arka plan renkleri (var: yeşil, yok: kırmızı, izinli: sarı)
+    if (status == 'present') return Colors.green.shade600;
+    if (status == 'absent') return Colors.red.shade600;
+    if (status == 'excused') return Colors.amber.shade700;
+    return Colors.grey.shade900;
+  }
+
+  void _updateStatus(int studentId, String status, {String? excuse}) {
+    setState(() {
+      _attendanceStatus[studentId] = status;
+      if (status == 'excused') {
+        _excuseNotes[studentId] = excuse;
+      } else {
+        _excuseNotes.remove(studentId);
+      }
+    });
   }
 
   Future<void> _showExcuseDialog(int studentId) async {
@@ -34,15 +287,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Mazerat Giriniz'),
-            icon: const Icon(Icons.edit_note_rounded),
+            title: const Text('İzin Sebebi'),
             content: TextField(
               autofocus: true,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Mazerat sebebi...',
+                hintText: 'Mazerat açıklaması...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               onChanged: (value) => excuse = value,
@@ -50,9 +302,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Vazgeç'),
+                child: const Text('İptal'),
               ),
-              FilledButton.tonal(
+              ElevatedButton(
                 onPressed: () {
                   if (excuse?.trim().isNotEmpty ?? false) {
                     Navigator.pop(context);
@@ -66,21 +318,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  void _updateStatus(int studentId, String status, {String? excuse}) {
-    setState(() {
-      _attendanceStatus[studentId] = status;
-      if (status == 'excused') {
-        _excuseNotes[studentId] = excuse;
-      } else {
-        _excuseNotes.remove(studentId);
-      }
-    });
-    Feedback.forTap(context);
-  }
-
   Future<void> _confirmAttendance() async {
+    if (_selectedLessonDuration == null) {
+      _showErrorSnackBar('Lütfen ders süresini seçin');
+      return;
+    }
     if (_attendanceStatus.length != _students.length) {
-      _showStatusSnackBar('Lütfen tüm öğrencileri işaretleyin', true);
+      _showErrorSnackBar('Lütfen tüm öğrencileri işaretleyin');
       return;
     }
 
@@ -89,26 +333,53 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       builder:
           (context) => AlertDialog(
             title: const Text('Yoklamayı Onayla'),
-            icon: const Icon(Icons.task_alt_rounded),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 400),
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _students.length,
-                separatorBuilder: (_, __) => const Divider(height: 16),
-                itemBuilder: (context, index) {
-                  final student = _students[index];
-                  final status = _attendanceStatus[student.studentLessonId];
-                  return _buildSummaryItem(student, status);
-                },
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ders: ${widget.lessonName}'),
+                  Text(
+                    'Süre: ${_lessonDurations.firstWhere((e) => e['value'] == _selectedLessonDuration)['text']}',
+                  ),
+                  const SizedBox(height: 16),
+                  // Özet ekranında, her öğrenci için adının yanına durum ikonları gösteriliyor.
+                  ..._students.map((student) {
+                    final status =
+                        _attendanceStatus[student.studentLessonId] ?? '?';
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        _getStatusIcon(status),
+                        color: Colors.white,
+                      ),
+                      title: Text(
+                        student.StudentName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                      subtitle:
+                          status == 'excused'
+                              ? Text(
+                                'Gerekçe: ${_excuseNotes[student.studentLessonId] ?? ''}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              )
+                              : null,
+                    );
+                  }).toList(),
+                ],
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('İptal'),
+                child: const Text('Vazgeç'),
               ),
-              FilledButton(
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Onayla'),
               ),
@@ -116,269 +387,149 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
     );
 
-    if (confirmed ?? false) {
-      await _submitAttendance();
+    if (confirmed ?? false) await _submitAttendance();
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'present':
+        return Icons.check_circle;
+      case 'absent':
+        return Icons.cancel;
+      case 'excused':
+        return Icons.info;
+      default:
+        return Icons.help_outline;
     }
   }
 
   Future<void> _submitAttendance() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
-      final data =
-          _students
-              .map(
-                (s) => {
-                  'lessonId': widget.lessonId,
-                  'studentId': s.studentId,
-                  'status': _attendanceStatus[s.studentLessonId],
-                  'excuse': _excuseNotes[s.studentLessonId],
-                },
-              )
-              .toList();
+      final attendanceList =
+          _students.map((student) {
+            final status = _attendanceStatus[student.studentLessonId];
+            // Eğer izinli ise açıklama boş olmamalı; aksi halde boş string gönderiyoruz.
+            final explanation =
+                status == 'excused'
+                    ? (_excuseNotes[student.studentLessonId]?.trim() ?? "")
+                    : "";
+            return {
+              'studentId': student.studentId,
+              'studentLessonId': student.studentLessonId,
+              'status': status,
+              'Explanation': explanation,
+            };
+          }).toList();
 
-      // API çağrısı simülasyonu
-      await Future.delayed(const Duration(seconds: 1));
+      final attendanceData = {
+        'lessonId': widget.lessonId,
+        'lessonPeriod': _selectedLessonDuration, // Ders süresi bilgisi
+        'startTime': DateFormat("HH:mm").format(DateTime.now()), // Şu anki saat
+        'Attendances': attendanceList,
+      };
 
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text('Yoklama başarıyla kaydedildi'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      );
-      navigator.pop();
+      final result = await submitAttendance(attendanceData);
+
+      if (result != null && result['success'] == true) {
+        setState(() {
+          _isAttendanceDisabled = true;
+          _remainingTime = _lockDuration.inSeconds;
+          _lastAttendanceTime = DateTime.now();
+        });
+        await _saveAttendanceTime(_lastAttendanceTime!);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Yoklama başarıyla kaydedildi'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      } else {
+        _showErrorSnackBar(
+          'API hatası: ${result?['message'] ?? 'Bilinmeyen hata'}',
+        );
+      }
     } catch (e) {
-      _showStatusSnackBar('Kayıt hatası: ${e.toString()}', false);
+      _showErrorSnackBar('Hata: $e');
     }
   }
 
-  void _showStatusSnackBar(String message, bool isWarning) {
+  void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isWarning ? Icons.warning_rounded : Icons.error_rounded,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isWarning ? Colors.orange : Colors.red,
+        content: Text(message),
+        backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Yoklama Al')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _confirmAttendance,
-        icon: const Icon(Icons.save_as_rounded),
-        label: const Text('Kaydet'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      body:
-          _students.isEmpty
-              ? const Center(child: Text('Öğrenci bulunamadı'))
-              : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _students.length,
-                itemBuilder:
-                    (context, index) => _buildStudentItem(_students[index]),
-              ),
+  Widget _buildFloatingActionButton() {
+    return FloatingActionButton.extended(
+      onPressed: _isAttendanceDisabled ? null : _confirmAttendance,
+      icon: const Icon(Icons.save),
+      label: const Text('Yoklamayı Kaydet'),
+      backgroundColor: _isAttendanceDisabled ? Colors.grey : Colors.blue,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
   }
 
-  Widget _buildStudentItem(StudentLesson student) {
-    final status = _attendanceStatus[student.studentLessonId];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Slidable(
-        key: ValueKey(student.studentLessonId),
-        startActionPane: ActionPane(
-          motion: const DrawerMotion(),
-          extentRatio: 0.25,
-          children: [
-            SlidableAction(
-              onPressed:
-                  (_) => _updateStatus(student.studentLessonId, 'present'),
-              backgroundColor: Colors.green.shade100,
-              foregroundColor: Colors.green.shade900,
-              icon: Icons.check_rounded,
-              label: 'Katıldı',
-              borderRadius: BorderRadius.circular(12),
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Yardım'),
+            content: const Text(
+              '• Öğrenci kartını sağa veya sola kaydırarak yoklama durumunu seçin.\n'
+              '• "İzinli" seçildiğinde açıklama girilmesi zorunludur.\n'
+              '• Yoklama alındıktan sonra 2 dakikaya kadar tekrar yoklama alınamaz.',
             ),
-          ],
-        ),
-        endActionPane: ActionPane(
-          motion: const DrawerMotion(),
-          extentRatio: 0.5,
-          children: [
-            SlidableAction(
-              onPressed:
-                  (_) => _updateStatus(student.studentLessonId, 'absent'),
-              backgroundColor: Colors.red.shade100,
-              foregroundColor: Colors.red.shade900,
-              icon: Icons.close_rounded,
-              label: 'Katılmadı',
-              borderRadius: BorderRadius.circular(12),
-            ),
-            SlidableAction(
-              onPressed: (_) => _showExcuseDialog(student.studentLessonId),
-              backgroundColor: Colors.orange.shade100,
-              foregroundColor: Colors.orange.shade900,
-              icon: Icons.warning_rounded,
-              label: 'İzinli',
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ],
-        ),
-        child: _buildStudentCard(student, status),
-      ),
-    );
-  }
-
-  Widget _buildStudentCard(StudentLesson student, String? status) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).dividerColor.withOpacity(0.1),
-        ),
-      ),
-      // Arka plan rengi; status yoksa beyaz yaparak kontrastı arttırıyoruz.
-      color: _getStatusColor(status),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        child: ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(
-            Icons.person_rounded,
-            size: 36,
-            color: _getTextColor(status),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                student.StudentName,
-                style: TextStyle(
-                  color: _getTextColor(status),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Öğrenci Numarası: ${student.studentId}',
-                style: TextStyle(color: _getTextColor(status), fontSize: 12),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Tamam'),
               ),
             ],
           ),
-          subtitle:
-              _excuseNotes[student.studentLessonId] != null
-                  ? Text(
-                    'Mazerat: ${_excuseNotes[student.studentLessonId]}',
-                    style: TextStyle(
-                      color: _getTextColor(status)?.withOpacity(0.8),
-                    ),
-                  )
-                  : null,
-          trailing: _buildStatusChip(status),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.lessonName),
+            if (_lastAttendanceTime != null)
+              Text(
+                'Son yoklama: ${DateFormat('HH:mm').format(_lastAttendanceTime!)}',
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String? status) {
-    final color = _getStatusColor(status);
-    final textColor = _getTextColor(status);
-
-    return status != null
-        ? Chip(
-          label: Text(
-            status == 'present'
-                ? 'Katıldı'
-                : status == 'absent'
-                ? 'Katılmadı'
-                : 'İzinli',
-            style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: _showHelpDialog,
           ),
-          backgroundColor: color,
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        )
-        : const SizedBox.shrink();
-  }
-
-  Widget _buildSummaryItem(StudentLesson student, String? status) {
-    return ListTile(
-      leading: Icon(_getStatusIcon(status), color: _getTextColor(status)),
-      title: Text(
-        student.StudentName,
-        style: TextStyle(color: _getTextColor(status)),
+        ],
       ),
-      subtitle:
-          _excuseNotes[student.studentLessonId] != null
-              ? Text(
-                'Mazerat: ${_excuseNotes[student.studentLessonId]}',
-                style: TextStyle(color: _getTextColor(status)),
-              )
-              : null,
-      trailing: Text(
-        status == 'present'
-            ? '✓'
-            : status == 'absent'
-            ? '✕'
-            : '⚠',
-        style: TextStyle(fontSize: 20, color: _getTextColor(status)),
+      body: Column(
+        children: [
+          _buildLessonDurationSelector(),
+          _buildTimeIndicator(),
+          _buildStudentList(),
+        ],
       ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
-  }
-
-  IconData _getStatusIcon(String? status) {
-    switch (status) {
-      case 'present':
-        return Icons.check_circle_rounded;
-      case 'absent':
-        return Icons.cancel_rounded;
-      case 'excused':
-        return Icons.warning_rounded;
-      default:
-        return Icons.help_rounded;
-    }
-  }
-
-  Color _getStatusColor(String? status) {
-    switch (status) {
-      case 'present':
-        return Colors.green.shade50;
-      case 'absent':
-        return Colors.red.shade50;
-      case 'excused':
-        return Colors.orange.shade50;
-      default:
-        return Colors.white; // Varsayılan beyaz arka plan
-    }
-  }
-
-  Color _getTextColor(String? status) {
-    switch (status) {
-      case 'present':
-        return Colors.green.shade900;
-      case 'absent':
-        return Colors.red.shade900;
-      case 'excused':
-        return Colors.orange.shade900;
-      default:
-        return Colors.black; // Varsayılan siyah metin
-    }
   }
 }

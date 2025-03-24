@@ -126,5 +126,37 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "SaveAttendance",
+    "RelativePath": "api/Teacher/SaveAttendance",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "WepApi.Dto.TeacherDtos.SaveAttendanceDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "GetAttendancesByTeacher",
+    "RelativePath": "api/Teacher/teacher/{teacherId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "teacherId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   }
 ]

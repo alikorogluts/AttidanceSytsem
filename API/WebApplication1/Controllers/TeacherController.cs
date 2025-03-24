@@ -7,6 +7,7 @@ using WepApi.Context;
 using WepApi.Dto.TeacherDtos;
 using WepApi.Entities;
 using WepApi.Services;
+using static WepApi.Dto.TeacherDtos.GetAttendancesByTeacher;
 
 namespace WepApi.Controllers
 {
@@ -148,9 +149,160 @@ namespace WepApi.Controllers
         }
 
 
+        [HttpPost("SaveAttendance")]
+        public IActionResult SaveAttendance([FromBody] SaveAttendanceDto model)
+        {
+            if (model == null)
+                return BadRequest(new { success = false, message = "Geçersiz veri formatı!" });
+
+            if (model.LessonId <= 0)
+                return BadRequest(new { success = false, message = "Geçersiz ders ID!" });
+
+            if (model.Attendances == null || !model.Attendances.Any())
+                return BadRequest(new { success = false, message = "Yoklama verisi bulunamadı!" });
+
+            if (!TimeSpan.TryParse(model.StartTime, out TimeSpan startTime))
+                return BadRequest(new { success = false, message = "Geçersiz başlangıç saati formatı!" });
+
+            var lesson = _context.Lessons
+                .Include(l => l.StudentLessons)
+                .FirstOrDefault(l => l.LessonId == model.LessonId);
+
+            if (lesson?.StudentLessons == null || !lesson.StudentLessons.Any())
+                return NotFound(new { success = false, message = "Ders veya öğrenci kayıtları bulunamadı!" });
+
+            foreach (var item in model.Attendances)
+            {
+                if (item.Status == AttendanceStatus.Excused && string.IsNullOrWhiteSpace(item.Explanation))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"{item.StudentLessonId} ID'li öğrenci için açıklama zorunludur!"
+                    });
+                }
+
+                var studentLesson = lesson.StudentLessons
+                    .FirstOrDefault(sl => sl.Id == item.StudentLessonId);
+
+                if (studentLesson == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"{item.StudentLessonId} ID'li öğrenci-ders kaydı bulunamadı!"
+                    });
+                }
+
+                var attendance = new Attendance
+                {
+                    StudentId = item.StudentId,
+                    StudentLessonId = item.StudentLessonId,
+                    SessionDate = DateTime.Now,
+                    LessonPeriod = model.LessonPeriod,
+                    StartTime = startTime,
+                    EndTime = startTime.Add(TimeSpan.FromMinutes(45 * model.LessonPeriod)),
+                    Status = item.Status,
+                    Explanation = item.Status == AttendanceStatus.Excused ? item.Explanation : null
+                };
+
+                if (item.Status == AttendanceStatus.Absent)
+                {
+                    studentLesson.AbsenceCount += model.LessonPeriod;
+                    studentLesson.AbsenceCount = Math.Max(studentLesson.AbsenceCount, 0);
+                }
+
+                _context.Attendances.Add(attendance);
+            }
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (DbUpdateException dbEx)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Veritabanı hatası: " + dbEx.InnerException?.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Beklenmeyen hata: " + ex.Message
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Yoklama başarıyla kaydedildi!",
+                affectedStudents = model.Attendances.Count
+            });
+        }
 
 
 
+
+        [HttpGet("teacher/{teacherId}")]
+        public IActionResult GetAttendancesByTeacher(int teacherId)
+        {
+            var lessons = _context.Lessons
+                .Where(l => l.TeacherId == teacherId)
+                .Include(l => l.StudentLessons)
+                    .ThenInclude(sl => sl.Attendances)
+                        .ThenInclude(a => a.Student)
+                .Select(l => new LessonAttendancesViewModel
+                {
+                    LessonId = l.LessonId,
+                    LessonName = l.Name,
+                    Sessions = l.StudentLessons
+                        .SelectMany(sl => sl.Attendances)
+                        .GroupBy(a => new { a.SessionDate, a.StartTime, a.EndTime })
+                        .OrderByDescending(g => g.Key.SessionDate)
+                        .ThenBy(g => g.Key.StartTime)
+                        .Select(g => new SessionAttendancesViewModel
+                        {
+                            SessionDate = g.Key.SessionDate,
+                            StartTime = g.Key.StartTime,
+                            EndTime = g.Key.EndTime,
+                            Attendances = g.Select(a => new AttendanceViewModel
+                            {
+                                AttendanceId = a.AttendanceId,
+                                Student = new StudentViewModel
+                                {
+                                    StudentId = a.Student.StudentId,
+                                    FullName = a.Student.FullName
+                                },
+                                Status = a.Status.ToString(),
+                                StartTime = a.StartTime,
+                                EndTime = a.EndTime,
+                                Explanation = a.Status == AttendanceStatus.Excused ? a.Explanation : null // İzinli olanlar için sebep ekleniyor
+                            }).ToList()
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            if (!lessons.Any())
+            {
+                return NotFound("Öğretmene ait yoklama kaydı bulunamadı.");
+            }
+
+            return Ok(lessons);
+        }
 
     }
+
+
+
+
+
+
+
+
 }
+

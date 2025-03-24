@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/AttendanceScreen.dart';
+import 'package:yoklama_mobil/Screen/Teacher/AttendanceScreen/AttendanceScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/CreateLessonScreen/CreateLessonScreen.dart';
-import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/EditAttendanceScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/MyLessonScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/_partialScreen/ReportsScreen.dart';
+import 'package:yoklama_mobil/Screen/Login/LoginScreen.dart'; // LoginScreen'iniz olduğunu varsayıyoruz
 
 class MyApp extends StatelessWidget {
   @override
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         ),
         navigationBarTheme: NavigationBarThemeData(
           labelTextStyle: MaterialStateProperty.resolveWith<TextStyle>((
-            Set<MaterialState> states,
+            states,
           ) {
             if (states.contains(MaterialState.selected)) {
               return TextStyle(
@@ -52,11 +52,11 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
   String? userName;
   late Future<void> _prefsFuture;
 
+  // Düzenle ekranı çıkarıldı, sayfa listesi güncellendi:
   final List<Widget> _pages = [
     MyLessonsScreen(),
     AttendanceScreen(),
     CreateLessonScreen(),
-    EditAttendanceScreen(),
     ReportsScreen(),
   ];
 
@@ -66,18 +66,34 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
     _prefsFuture = _loadUserData();
   }
 
-  Future<String?> _loadUserData() async {
+  Future<void> _loadUserData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       userName = prefs.getString("user_name");
     });
-    return userName;
+  }
+
+  Future<void> _logout() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove("user_mail");
+    await prefs.remove("user_role");
+    await prefs.remove("user_name");
+    // Login ekranına yönlendiriyoruz (LoginScreen tanımlı olmalı)
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Logo sol tarafa yerleştirildi:
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+        ),
         title: Text(
           userName ?? "Öğretmen Paneli",
           style: TextStyle(
@@ -86,24 +102,17 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: CircleAvatar(backgroundImage: AssetImage('assets/logo.png')),
-          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
       body: FutureBuilder(
         future: _prefsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           return AnimatedSwitcher(
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             child: _pages[_selectedIndex],
           );
         },
@@ -137,12 +146,7 @@ class _TeacherMainScreenState extends State<TeacherMainScreen> {
           label: 'Oluştur',
         ),
         NavigationDestination(
-          icon: Icon(Icons.edit_note_outlined, color: _getIconColor(3)),
-          selectedIcon: Icon(Icons.edit_note, color: _getSelectedColor()),
-          label: 'Düzenle',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.insert_chart_outlined, color: _getIconColor(4)),
+          icon: Icon(Icons.insert_chart_outlined, color: _getIconColor(3)),
           selectedIcon: Icon(Icons.insert_chart, color: _getSelectedColor()),
           label: 'Raporlar',
         ),

@@ -1,7 +1,7 @@
 import 'package:yoklama_mobil/Models/LessonModel.dart';
 import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/_AttendanceScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/_StudentListScreen.dart';
-import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/GetLessonStudentList.dart';
+import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/_GetLessonStudentListServices.dart';
 import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/GetListLessonServices.dart';
 
 import 'package:flutter/material.dart';
@@ -154,7 +154,8 @@ class _MyLessonsScreenState extends State<MyLessonsScreen> {
                   child: _buildActionButton(
                     icon: Icons.assignment_turned_in_rounded,
                     label: 'Yoklama Al',
-                    onPressed: () => _takeAttendance(lesson.lessonId),
+                    onPressed:
+                        () => _takeAttendance(lesson.lessonId, lesson.name),
                     colors: colors,
                   ),
                 ),
@@ -235,7 +236,7 @@ class _MyLessonsScreenState extends State<MyLessonsScreen> {
     }
   }
 
-  void _takeAttendance(int lessonId) async {
+  void _takeAttendance(int lessonId, String name) async {
     try {
       final students = await getLessonStudentList(lessonId);
 
@@ -248,7 +249,8 @@ class _MyLessonsScreenState extends State<MyLessonsScreen> {
             builder:
                 (context) => AttendanceScreen(
                   students: students,
-                  lessonId: lessonId, // Eğer ihtiyaç varsa
+                  lessonId: lessonId,
+                  lessonName: name, // Eğer ihtiyaç varsa
                 ),
           ),
         );

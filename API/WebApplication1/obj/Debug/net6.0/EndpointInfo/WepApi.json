@@ -234,10 +234,107 @@
           }
         }
       }
+    },
+    "/api/Teacher/SaveAttendance": {
+      "post": {
+        "tags": [
+          "Teacher"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAttendanceDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAttendanceDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAttendanceDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Teacher/teacher/{teacherId}": {
+      "get": {
+        "tags": [
+          "Teacher"
+        ],
+        "parameters": [
+          {
+            "name": "teacherId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AttendanceItem": {
+        "required": [
+          "status",
+          "studentLessonId"
+        ],
+        "type": "object",
+        "properties": {
+          "studentLessonId": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "studentId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "explanation": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttendanceStatus": {
+        "enum": [
+          0,
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
       "CreateLessonRequestDto": {
         "type": "object",
         "properties": {
@@ -292,6 +389,42 @@
           "password": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SaveAttendanceDto": {
+        "required": [
+          "attendances",
+          "lessonId",
+          "lessonPeriod",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "lessonId": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "lessonPeriod": {
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "startTime": {
+            "minLength": 1,
+            "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$",
+            "type": "string"
+          },
+          "attendances": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceItem"
+            }
           }
         },
         "additionalProperties": false
