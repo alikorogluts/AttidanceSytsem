@@ -97,6 +97,22 @@
   },
   {
     "ContainingType": "WepApi.Controllers.TeacherController",
+    "Method": "GetAttendancesByTeacher",
+    "RelativePath": "api/Teacher/GetAttendancesByTeacher/{teacherEmail}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "teacherEmail",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WepApi.Controllers.TeacherController",
     "Method": "GetLesson",
     "RelativePath": "api/Teacher/GetLesson",
     "HttpMethod": "GET",
@@ -145,15 +161,15 @@
   },
   {
     "ContainingType": "WepApi.Controllers.TeacherController",
-    "Method": "GetAttendancesByTeacher",
-    "RelativePath": "api/Teacher/teacher/{teacherId}",
-    "HttpMethod": "GET",
+    "Method": "UpdateAttendance",
+    "RelativePath": "api/Teacher/UpdateAttendance",
+    "HttpMethod": "PUT",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "teacherId",
-        "Type": "System.Int32",
+        "Name": "model",
+        "Type": "WepApi.Dto.TeacherDtos.UpdateAttendanceDto",
         "IsRequired": true
       }
     ],

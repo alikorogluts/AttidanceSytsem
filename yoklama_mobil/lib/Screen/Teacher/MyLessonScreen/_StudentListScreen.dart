@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:yoklama_mobil/Models/GetLessonStudentList.dart';
+import 'package:yoklama_mobil/Models/GetLessonStudentListModel.dart';
 import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/_DeleteLessonStudentServices.dart';
 
 class StudentListScreen extends StatefulWidget {

@@ -247,9 +247,11 @@ namespace WepApi.Controllers
 
 
 
-        [HttpGet("teacher/{teacherId}")]
-        public IActionResult GetAttendancesByTeacher(int teacherId)
+        [HttpGet("GetAttendancesByTeacher/{teacherEmail}")]
+        public IActionResult GetAttendancesByTeacher(string teacherEmail)
         {
+            var teacher = _context.Teachers.FirstOrDefault(t => t.Email == teacherEmail);
+            var teacherId = teacher.TeacherId;
             var lessons = _context.Lessons
                 .Where(l => l.TeacherId == teacherId)
                 .Include(l => l.StudentLessons)
@@ -294,6 +296,55 @@ namespace WepApi.Controllers
 
             return Ok(lessons);
         }
+
+
+        [HttpPut("UpdateAttendance")]
+        public IActionResult UpdateAttendance([FromBody] UpdateAttendanceDto model)
+        {
+            var attendance = _context.Attendances
+                .Include(a => a.StudentLesson)
+                .FirstOrDefault(a => a.AttendanceId == model.AttendanceId);
+
+            if (attendance == null)
+            {
+                return BadRequest(new { success = false, message = "Kayıtlı yoklama bulunamadı" });
+            }
+
+            if (model.Status.ToString() == "Excused" && string.IsNullOrWhiteSpace(model.Explanation))
+            {
+                return BadRequest(new { success = false, message = "Açıklama zorunlu!" });
+            }
+
+            if (!Enum.TryParse<AttendanceStatus>(model.Status.ToString(), out var newStatus))
+            {
+                return BadRequest(new { success = false, message = "Geçersiz durum!" });
+            }
+
+            // Eğer gelen durum, database'deki mevcut durumla aynı ise hiçbir işlem yapmadan döndür.
+            if (attendance.Status == newStatus)
+            {
+                return Ok(new { success = true, message = "Güncelleme yapılmadı, çünkü durum değişmedi." });
+            }
+
+            var duration = (int)(attendance.EndTime - attendance.StartTime).TotalHours + 1;
+
+            if (attendance.Status == AttendanceStatus.Absent && newStatus != AttendanceStatus.Absent)
+            {
+                attendance.StudentLesson.AbsenceCount -= duration;
+            }
+            else if (attendance.Status != AttendanceStatus.Absent && newStatus == AttendanceStatus.Absent)
+            {
+                attendance.StudentLesson.AbsenceCount += duration;
+            }
+
+            attendance.Status = newStatus;
+            attendance.Explanation = newStatus == AttendanceStatus.Excused ? model.Explanation : null;
+
+            _context.SaveChanges();
+
+            return Ok(new { success = true, message = "İşlem Başarılı" });
+        }
+
 
     }
 

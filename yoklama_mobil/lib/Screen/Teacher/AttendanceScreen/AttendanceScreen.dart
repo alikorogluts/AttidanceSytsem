@@ -1,44 +1,61 @@
+// attendance_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class AttendanceScreen extends StatelessWidget {
-  final List<Map<String, dynamic>> lessons = [
-    {
-      "lessonId": 1,
-      "lessonName": "Matematik 101",
-      "sessions": [
-        {
-          "sessionDate": "2025-03-24T04:07:04.5202296",
-          "startTime": "04:06:00",
-          "endTime": "05:36:00",
-          "attendances": [
-            {
-              "attendanceId": 6,
-              "student": {"studentId": 220506, "fullName": "Koroglu Ali"},
-              "status": "Present",
-              "startTime": "04:06:00",
-              "endTime": "05:36:00",
-              "explanation": null,
-            },
-            {
-              "attendanceId": 5,
-              "student": {"studentId": 220502, "fullName": "Ali Koroglu"},
-              "status": "Excused",
-              "startTime": "04:06:00",
-              "endTime": "05:36:00",
-              "explanation": "Hastalık",
-            },
-          ],
-        },
-      ],
-    },
-    {"lessonId": 2, "lessonName": "Boş Ders", "sessions": []},
-  ];
+// Model ve servis importlarını unutmayın:
+import 'package:yoklama_mobil/Models/GetAttendanceListModel.dart'
+    as GetAttendaceList;
+import 'package:yoklama_mobil/Screen/Teacher/AttendanceScreen/EditAttendanceScreen.dart';
+import 'package:yoklama_mobil/Services/TeacherServices/AttendanceServices/GetAttendanceListServices.dart';
+
+class AttendanceScreen extends StatefulWidget {
+  const AttendanceScreen({Key? key}) : super(key: key);
+
+  @override
+  _AttendanceScreenState createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  String? teacherEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  // SharedPreferences'den user_email bilgisini çekiyoruz.
+  Future<void> _loadUserData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString("user_mail");
+    if (email == null) {
+      print("user_email bulunamadı!");
+    }
+    setState(() {
+      teacherEmail = email;
+    });
+  }
+
+  Future<List<GetAttendaceList.Lesson>> _fetchLessons() async {
+    if (teacherEmail == null) {
+      // Eğer henüz e-posta yüklenmediyse boş liste döndürüyoruz.
+      return [];
+    }
+    return await getAttendaceList(teacherEmail!);
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+
+    // Eğer teacherEmail null ise veri yükleniyor demektir.
+    if (teacherEmail == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Yoklama Listesi")),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Theme(
       data: ThemeData.dark().copyWith(
@@ -53,23 +70,43 @@ class AttendanceScreen extends StatelessWidget {
         ),
       ),
       child: Scaffold(
-        body: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: lessons.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final lesson = lessons[index];
-            return _buildLessonCard(lesson, colors);
+        body: FutureBuilder<List<GetAttendaceList.Lesson>>(
+          future: _fetchLessons(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Hata: ${snapshot.error}"));
+            } else if (snapshot.hasData) {
+              final lessons = snapshot.data!;
+              if (lessons.isEmpty) {
+                return const Center(child: Text("Henüz veri yok."));
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: lessons.length,
+                separatorBuilder:
+                    (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final lesson = lessons[index];
+                  return _buildLessonCard(lesson, colors);
+                },
+              );
+            } else {
+              return const Center(child: Text("Henüz veri yok."));
+            }
           },
         ),
       ),
     );
   }
 
-  Widget _buildLessonCard(Map<String, dynamic> lesson, ColorScheme colors) {
-    final sessions = _groupSessions(lesson["sessions"] as List);
+  Widget _buildLessonCard(GetAttendaceList.Lesson lesson, ColorScheme colors) {
+    // Modelden gelen sessionları, aynı startTime ve endTime değerlerine göre gruplandırıyoruz.
+    final sessions = _groupSessions(lesson.sessions);
     final sessionCount = sessions.length;
-    final lessonName = lesson["lessonName"]?.toString() ?? "İsimsiz Ders";
+    final lessonName =
+        lesson.lessonName.isNotEmpty ? lesson.lessonName : "İsimsiz Ders";
 
     return Card(
       child: ExpansionTile(
@@ -82,7 +119,7 @@ class AttendanceScreen extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Text(
-            lessonName.isNotEmpty ? lessonName.substring(0, 1) : "?",
+            lessonName.substring(0, 1),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -105,11 +142,9 @@ class AttendanceScreen extends StatelessWidget {
         ),
         children:
             sessionCount > 0
-                ? sessions
-                    .map<Widget>((session) => _buildSessionTile(session))
-                    .toList()
-                : [
-                  const ListTile(
+                ? sessions.map((session) => _buildSessionTile(session)).toList()
+                : const [
+                  ListTile(
                     title: Text("Henüz yoklama kaydı bulunmuyor"),
                     leading: Icon(Icons.info_outline),
                   ),
@@ -118,10 +153,33 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSessionTile(Map<String, dynamic> session) {
-    final attendances = session["attendances"] as List;
-    final startTime = formatTime(session["startTime"]!.toString());
-    final endTime = formatTime(session["endTime"]!.toString());
+  /// Aynı startTime ve endTime değerine sahip Session'ları birleştirir.
+  List<GetAttendaceList.Session> _groupSessions(
+    List<GetAttendaceList.Session> sessions,
+  ) {
+    final Map<String, GetAttendaceList.Session> grouped = {};
+
+    for (var session in sessions) {
+      final key = "${session.startTime}-${session.endTime}";
+      if (!grouped.containsKey(key)) {
+        // Mevcut session'ın attendances listesini kopyalayarak ekliyoruz.
+        grouped[key] = GetAttendaceList.Session(
+          sessionDate: session.sessionDate,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          attendances: List.from(session.attendances),
+        );
+      } else {
+        grouped[key]!.attendances.addAll(session.attendances);
+      }
+    }
+    return grouped.values.toList();
+  }
+
+  Widget _buildSessionTile(GetAttendaceList.Session session) {
+    final attendances = session.attendances;
+    final startTime = formatTime(session.startTime);
+    final endTime = formatTime(session.endTime);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -138,9 +196,7 @@ class AttendanceScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Column(
               children:
-                  attendances
-                      .map<Widget>((att) => _buildAttendanceTile(att))
-                      .toList(),
+                  attendances.map((att) => _buildAttendanceTile(att)).toList(),
             ),
           ),
         ],
@@ -148,14 +204,16 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttendanceTile(Map<String, dynamic> att) {
-    final statusColor = _getStatusColor(att["status"]);
-    final explanation = att["explanation"]?.toString();
+  Widget _buildAttendanceTile(GetAttendaceList.Attendance att) {
+    final statusColor = _getStatusColor(att.status);
+    final explanation = att.explanation;
     final studentName =
-        att["student"]?["fullName"]?.toString() ?? "İsimsiz Öğrenci";
+        att.student.fullName.isNotEmpty
+            ? att.student.fullName
+            : "İsimsiz Öğrenci";
 
     return Slidable(
-      key: Key(att["attendanceId"].toString()),
+      key: Key(att.attendanceId.toString()),
       endActionPane: ActionPane(
         motion: const ScrollMotion(),
         children: [
@@ -174,18 +232,18 @@ class AttendanceScreen extends StatelessWidget {
             color: statusColor.withOpacity(0.2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(_getStatusIcon(att["status"]), color: statusColor),
+          child: Icon(_getStatusIcon(att.status), color: statusColor),
         ),
         title: Text(
           studentName,
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle:
-            explanation?.isNotEmpty == true
+            explanation != null && explanation.isNotEmpty
                 ? Text("Açıklama: $explanation")
                 : null,
         trailing: Text(
-          _translateStatus(att["status"]),
+          _translateStatus(att.status),
           style: TextStyle(
             color: statusColor,
             fontWeight: FontWeight.bold,
@@ -194,26 +252,6 @@ class AttendanceScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // Yeni eklenen yardımcı fonksiyonlar
-  List<Map<String, dynamic>> _groupSessions(List sessions) {
-    final Map<String, Map<String, dynamic>> grouped = {};
-
-    for (var session in sessions) {
-      final key = "${session["startTime"]}-${session["endTime"]}";
-      if (!grouped.containsKey(key)) {
-        grouped[key] = {
-          "sessionDate": session["sessionDate"],
-          "startTime": session["startTime"],
-          "endTime": session["endTime"],
-          "attendances": [],
-        };
-      }
-      grouped[key]!['attendances'].addAll(session["attendances"] as List);
-    }
-
-    return grouped.values.toList();
   }
 
   String _translateStatus(String status) {
@@ -255,17 +293,14 @@ class AttendanceScreen extends StatelessWidget {
     }
   }
 
-  void _editAttendance(Map<String, dynamic> attendance) {
-    // Düzenleme işlemleri
-  }
-
-  String formatDate(String isoDate) {
-    try {
-      final date = DateTime.parse(isoDate);
-      return DateFormat('dd MMM yyyy', 'tr_TR').format(date);
-    } catch (e) {
-      return isoDate;
-    }
+  // Mevcut _editAttendance fonksiyonunuz:
+  void _editAttendance(GetAttendaceList.Attendance attendance) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditAttendanceScreen(attendance: attendance),
+      ),
+    );
   }
 
   String formatTime(String time) {

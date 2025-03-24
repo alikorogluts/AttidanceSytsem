@@ -7,8 +7,8 @@
       "RelativeMoniker": "D:0:0:{0C70AC57-C7EB-44C1-AC9C-69ADEFB80060}|WebApplication1\\WepApi.csproj|solutionrelative:webapplication1\\controllers\\teachercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C70AC57-C7EB-44C1-AC9C-69ADEFB80060}|WebApplication1\\WepApi.csproj|c:\\users\\aliko\\onedrive\\belgeler\\github\\attidancesytsem\\api\\webapplication1\\dto\\teacherdtos\\getattendancesbyteacher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{0C70AC57-C7EB-44C1-AC9C-69ADEFB80060}|WebApplication1\\WepApi.csproj|solutionrelative:webapplication1\\dto\\teacherdtos\\getattendancesbyteacher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{0C70AC57-C7EB-44C1-AC9C-69ADEFB80060}|WebApplication1\\WepApi.csproj|c:\\users\\aliko\\onedrive\\belgeler\\github\\attidancesytsem\\api\\webapplication1\\dto\\teacherdtos\\updateattendancedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{0C70AC57-C7EB-44C1-AC9C-69ADEFB80060}|WebApplication1\\WepApi.csproj|solutionrelative:webapplication1\\dto\\teacherdtos\\updateattendancedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -55,14 +55,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "GetAttendancesByTeacher.cs",
-              "DocumentMoniker": "C:\\Users\\aliko\\OneDrive\\Belgeler\\GitHub\\AttidanceSytsem\\API\\WebApplication1\\Dto\\TeacherDtos\\GetAttendancesByTeacher.cs",
-              "RelativeDocumentMoniker": "WebApplication1\\Dto\\TeacherDtos\\GetAttendancesByTeacher.cs",
-              "ToolTip": "C:\\Users\\aliko\\OneDrive\\Belgeler\\GitHub\\AttidanceSytsem\\API\\WebApplication1\\Dto\\TeacherDtos\\GetAttendancesByTeacher.cs",
-              "RelativeToolTip": "WebApplication1\\Dto\\TeacherDtos\\GetAttendancesByTeacher.cs",
-              "ViewState": "AgIAABQAAAAAAAAAAADwvxoAAAAmAAAAAAAAAA==",
+              "Title": "UpdateAttendanceDto.cs",
+              "DocumentMoniker": "C:\\Users\\aliko\\OneDrive\\Belgeler\\GitHub\\AttidanceSytsem\\API\\WebApplication1\\Dto\\TeacherDtos\\UpdateAttendanceDto.cs",
+              "RelativeDocumentMoniker": "WebApplication1\\Dto\\TeacherDtos\\UpdateAttendanceDto.cs",
+              "ToolTip": "C:\\Users\\aliko\\OneDrive\\Belgeler\\GitHub\\AttidanceSytsem\\API\\WebApplication1\\Dto\\TeacherDtos\\UpdateAttendanceDto.cs",
+              "RelativeToolTip": "WebApplication1\\Dto\\TeacherDtos\\UpdateAttendanceDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-24T01:18:59.086Z",
+              "WhenOpened": "2025-03-24T16:25:23.758Z",
               "EditorCaption": ""
             },
             {
@@ -73,7 +73,7 @@
               "RelativeDocumentMoniker": "WebApplication1\\Controllers\\TeacherController.cs",
               "ToolTip": "C:\\Users\\aliko\\OneDrive\\Belgeler\\GitHub\\AttidanceSytsem\\API\\WebApplication1\\Controllers\\TeacherController.cs",
               "RelativeToolTip": "WebApplication1\\Controllers\\TeacherController.cs",
-              "ViewState": "AgIAABABAAAAAAAAAAAAABoBAAArAAAAAAAAAA==",
+              "ViewState": "AgIAAPoAAAAAAAAAAAAuwC4BAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-21T01:15:31.393Z",
               "EditorCaption": ""

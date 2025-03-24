@@ -1,5 +1,5 @@
 import 'package:yoklama_mobil/Models/LessonModel.dart';
-import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/_AttendanceScreen.dart';
+import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/_TakeAttendanceScreen.dart';
 import 'package:yoklama_mobil/Screen/Teacher/MyLessonScreen/_StudentListScreen.dart';
 import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/_GetLessonStudentListServices.dart';
 import 'package:yoklama_mobil/Services/TeacherServices/MyLessonServices/GetListLessonServices.dart';
