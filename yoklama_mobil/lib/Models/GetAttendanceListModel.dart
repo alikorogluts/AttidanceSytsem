@@ -50,10 +50,10 @@ class Session {
 class Attendance {
   final int attendanceId;
   final Student student;
-  final String status;
+  late String status;
   final String startTime;
   final String endTime;
-  final String? explanation;
+  late String? explanation;
 
   Attendance({
     required this.attendanceId,

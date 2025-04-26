@@ -1,6 +1,7 @@
 // attendance_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Model ve servis importlarını unutmayın:
@@ -186,7 +187,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: const Icon(Icons.schedule, size: 20),
-        title: Text("$startTime - $endTime"),
+        title: Text(
+          "${_formatDate(session.sessionDate)} ($startTime - $endTime)",
+        ),
         subtitle: Text(
           "${attendances.length} Kayıtlı öğrenci",
           style: TextStyle(color: Colors.grey[400]),
@@ -294,13 +297,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   // Mevcut _editAttendance fonksiyonunuz:
-  void _editAttendance(GetAttendaceList.Attendance attendance) {
-    Navigator.push(
+  void _editAttendance(GetAttendaceList.Attendance attendance) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditAttendanceScreen(attendance: attendance),
       ),
     );
+
+    if (result == true) {
+      setState(() {
+        // bu kısım ekrandaki verilerin yeniden çizilmesini sağlar
+      });
+    }
   }
 
   String formatTime(String time) {
@@ -308,6 +317,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       return time.substring(0, 5);
     } catch (e) {
       return time;
+    }
+  }
+
+  String _formatDate(String date) {
+    try {
+      final regex = RegExp(r'^(\d{4}-\d{2}-\d{2})T');
+      final match = regex.firstMatch(date);
+
+      if (match != null) {
+        final datePart = match.group(1)!; // yyyy-MM-dd
+        final parsed = DateFormat('yyyy-MM-dd').parse(datePart);
+        return DateFormat(
+          'dd-MM-yyyy',
+        ).format(parsed); // istediğin format: 19-04-2025
+      } else {
+        return date;
+      }
+    } catch (e) {
+      return date;
     }
   }
 }

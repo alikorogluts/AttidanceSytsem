@@ -194,6 +194,9 @@ namespace WepApi.Controllers
                     });
                 }
 
+                var rawEndTime = startTime.Add(TimeSpan.FromMinutes(45 * model.LessonPeriod));
+                var normalizedEndTime = TimeSpan.FromSeconds(rawEndTime.TotalSeconds % (24 * 60 * 60));
+
                 var attendance = new Attendance
                 {
                     StudentId = item.StudentId,
@@ -201,7 +204,7 @@ namespace WepApi.Controllers
                     SessionDate = DateTime.Now,
                     LessonPeriod = model.LessonPeriod,
                     StartTime = startTime,
-                    EndTime = startTime.Add(TimeSpan.FromMinutes(45 * model.LessonPeriod)),
+                    EndTime = normalizedEndTime,
                     Status = item.Status,
                     Explanation = item.Status == AttendanceStatus.Excused ? item.Explanation : null
                 };

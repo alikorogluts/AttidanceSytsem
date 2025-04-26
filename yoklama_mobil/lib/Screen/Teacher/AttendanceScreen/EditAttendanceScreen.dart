@@ -89,7 +89,17 @@ class _EditAttendanceScreenState extends State<EditAttendanceScreen> {
       );
 
       if (data?["success"] == true) {
-        Navigator.pop(context, true);
+        setState(() {
+          widget.attendance.status =
+              _selectedStatus == 0
+                  ? "Present"
+                  : _selectedStatus == 1
+                  ? "Absent"
+                  : "Excused";
+          widget.attendance.explanation = _explanationController.text;
+        });
+
+        Navigator.pop(context, true); // başarılı şekilde geri dön
       }
     }
   }
